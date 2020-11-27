@@ -1,0 +1,4 @@
+Hello ,
+this is new file for commit.
+commit to be shown in shell script
+new line for US id in commit msg

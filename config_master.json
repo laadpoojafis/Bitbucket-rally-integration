@@ -1,0 +1,40 @@
+{
+  "rally": {
+    "tenant_name": "WPT",
+    "pullRequests": "yes",
+    "commits": "yes",
+    "updateArtifactStatus": "yes",
+    "branches": {
+      "includes": ["feature*","hotfix*","release*","master","develop"],
+      "excludes": ["temp*"]      
+    },
+    "artifactPrefix": {
+      "DE" : "defect",
+      "US": "hierarchicalrequirement",
+      "DS": "defectSuite",
+      "TA" :"task"
+    },
+    "status": ["Submitted", "Open", "In Progress", "Fixed", "Ready for Test", "Deferred", "Closed", "Rejected", "Reopen"]
+  },
+  "comment": {
+    "readme": "This is master file and can be overridden by Repository Specific File",
+    "pullRequests": "Do we need to push Pull Requests details to Rally , Options : yes/no",
+    "commits": "Do we need to push Commits details to Rally , Options : yes/no",
+    "updateArtifactStatus": "Do we need to Update Artifact Status onto Rally , Options : yes/no",
+    "branches": {
+      "includes": [
+        "Prefixes or complete name of branches which we intend to be part of this integration"
+      ],
+      "excludes": [
+        "Prefixes or complete name of branches which we intend not to be part of this integration"
+      ]      
+    },
+    "artifactPrefix": {
+      "defect": "As per Project",
+      "userStory": "As per Project",
+      "defectSuite": "As per Project",
+      "task": "As per Project"
+    },
+    "status": ["Available State Values as per Rally Project"]
+  }
+}
