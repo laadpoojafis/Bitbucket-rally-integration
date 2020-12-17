@@ -1,0 +1,2 @@
+curl --header "zsessionid:_5qkiIFxQaSYES9XL4aMNUFH2EeGMEiemV4EtMH4o" -H "Content-Type: application/json" -d '{"PullRequest":{"Description":"pull request in bitbucket","Name":"testing","Artifact":"/defect/409983288260","ExternalID":"123","ExternalFormattedId":"12345","Url":"https://github.com/AdeptFIS/Rally/pull/2"}}' https://rally1.rallydev.com/slm/webservice/v2.0/pullrequest/create
+cat post.json
