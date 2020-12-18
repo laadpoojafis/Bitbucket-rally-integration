@@ -1,5 +1,7 @@
 #!/bin/bash
-msg_regex='[A-Z]+[A-Z]+[0-9]+' 
+msg_regex='[A-Z]+[A-Z]+[0-9]+'
+mv PR.properties PR_old.properties
+echo projectkey.repoSlug.branchName > PR.properties 
 #call project get api
 curl -H "Authorization: Bearer OTgzOTI5NzkzMDQwOrJwlCvfwyDJ8QDWy1A5ILUoplte" http://172.16.8.35:7990/rest/api/1.0/projects?limit=1 >projects.json
 #call end project get api
@@ -26,19 +28,24 @@ do
 		do
  	           Description=`cat repos_${projectkey}_${repoSlug}.json | /p/jq '.values['"${tb}"'].description'`
                    Title=`cat repos_${projectkey}_${repoSlug}.json | /p/jq '.values['"${tb}"'].title'`
-		  Artifacts=`cat repos_${projectkey}_${repoSlug}.json | /p/jq '.values['"${tb}"'].description' | grep -oE $msg_regex`
-                   echo ${Artifacts}
-         	cmd="https://rally1.rallydev.com/slm/webservice/v2.0/defect?query=(FormattedID%20%3D%20${Artifacts})"
-	       echo ${cmd}
+		   cat repos_${projectkey}_${repoSlug}.json | /p/jq '.values['"${tb}"'].title' | grep -oE $msg_regex > artifactIds
+                     cat artifactIds
+		for artifacts in `cat artifactIds | uniq`
+ 		do
+  		echo ${artifacts} 
+                  echo ${Title} ${Description}
+         	 cmd="https://rally1.rallydev.com/slm/webservice/v2.0/defect?query=(FormattedID%20%3D%20${artifacts})"
+	         echo ${cmd}
 		curl --header "zsessionid:_qjZabCw6TUajYHNKzj5pZ587kdzh70RSrjTs9aNkH7M" -H "Content-Type: application/json" ${cmd} >get.json
   	      	ObjectId=`cat get.json | cut -d"/" -f8 | cut -d"\"" -f1`
               	echo ${ObjectId}
 		artifact="/defect/${ObjectId}"
  		url="http://172.16.8.35:7990/projects/${projectkey}/repos/${repoSlug}/pull-requests"
-		echo ${url} ${artefact}
-		#post API call
+		echo "URL and artifact will be "${url} ${artifact}
+		post API call
 		curl --header "zsessionid:_5qkiIFxQaSYES9XL4aMNUFH2EeGMEiemV4EtMH4o" -H "Content-Type: application/json" -d '{"PullRequest":{"Description":'"${Description}"',"Name":'"${Title}"',"Artifact":"'"${artifact}"'","ExternalID":"123","ExternalFormattedId":"12345","Url":"'"${url}"'"}}' https://rally1.rallydev.com/slm/webservice/v2.0/pullrequest/create
-		cat post.json	
+		cat post.json
+	done	
 		done
 		
 	done	
