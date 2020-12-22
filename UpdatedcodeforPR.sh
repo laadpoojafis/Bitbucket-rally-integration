@@ -56,21 +56,17 @@ cp newpullrequests.properties newpullrequests_updated.properties
    sed -i "/${artifacts}/s/^/${ObjectId}./" newpullrequests_updated.properties
 done
 ##POST API Call to Rally
-		for tn in `cat newpullrequests_updated.properties`
-		do
-			echo hi
+		while read tn; do
 			echo $tn
 ObjectId=`echo $tn | cut -d '.' -f1`
-#newPR=`echo $tn | cut -d '.' -f4`
-Description=`echo $tn | cut -d '.' -f6`
-Title=`echo $tn | cut -d '.' -f5`
+Description=`echo $tn | cut -d '.' -f5`
+Title=`echo $tn | cut -d '.' -f4`
 echo "object,desc,title" ${ObjectId} ${Description} ${Title}
 url="http://172.16.8.35:7990/projects/${projectkey}/repos/${repoSlug}/pull-requests"
 echo url ${url}
 artifact="/defect/${ObjectId}"
-#curl --header "zsessionid:_5qkiIFxQaSYES9XL4aMNUFH2EeGMEiemV4EtMH4o" -H "Content-Type: application/json" -d '{"PullRequest":{"Description":'"${Description}"',"Name":'"${Title}"',"Artifact":"'"${artifact}"'","ExternalID":"123","ExternalFormattedId":"12345","Url":"'"${url}"'"}}' https://rally1.rallydev.com/slm/webservice/v2.0/pullrequest/create
-#cat post.json
- 
-done	
+curl --header "zsessionid:_5qkiIFxQaSYES9XL4aMNUFH2EeGMEiemV4EtMH4o" -H "Content-Type: application/json" -d '{"PullRequest":{"Description":"'"${Description}"'","Name":"'"${Title}"'","Artifact":"'"${artifact}"'","ExternalID":"123","ExternalFormattedId":"12345","Url":"'"${url}"'"}}' https://rally1.rallydev.com/slm/webservice/v2.0/pullrequest/create
+cat post.json
+ done <newpullrequests_updated.properties
 
 
