@@ -2,12 +2,14 @@
 #BranchNames File
 mv branchnames.properties branchnames_old.properties
 mv pr.properties pr_old.properties
+mv commits.properties commits_old.properties
 echo projectkey "|" repoSlug "|" branchName > branchnames.properties
 echo projectkey "|" repoSlug "|" Pullrequest > pr.properties 
+echo projectkey "|" repoSlug "|" commit > commits.properties 
 touch ObjectArtifactMapping.properties
 #msg_regex='[A-Z]+[A-Z]+[0-9]+' 
 msg_regex="(DE|US|DS|TA)+[[:digit:]]+"
-bitbucketKey="OTgzOTI5NzkzMDQwOrJwlCvfwyDJ8QDWy1A5ILUoplte" 
+bitbucketKey="OTgzOTI5NzkzMDQwOrJwlCvfwyDJ8QDWy1A5ILUoplte"
 rallyKey="_qjZabCw6TUajYHNKzj5pZ587kdzh70RSrjTs9aNkH7M"
 #Functions
 getProjects()
@@ -32,7 +34,6 @@ getProjects()
    
     done
 }
-
 getRepos()
 {
     totalRepos=$1
@@ -50,7 +51,13 @@ getRepos()
         curl -H "Authorization: Bearer OTgzOTI5NzkzMDQwOrJwlCvfwyDJ8QDWy1A5ILUoplte" http://172.16.8.35:7990/rest/api/1.0/projects/${projectkey}/repos/${repoSlug}/pull-requests >repos_${projectkey}_${repoSlug}_PR.json
         totalPRs=`cat repos_${projectkey}_${repoSlug}_PR.json | /p/Softwares/jq  '.size'`
         getPRs ${totalPRs} ${projectkey} ${repoSlug}
+	
+	 #api call to get all commits for repo
+        curl -H "Authorization: Bearer OTgzOTI5NzkzMDQwOrJwlCvfwyDJ8QDWy1A5ILUoplte" http://172.16.8.35:7990/rest/api/1.0/projects/${projectkey}/repos/${repoSlug}/commits >repos_${projectkey}_${repoSlug}_Commit.json
+   	totalcommits=`cat repos_${projectkey}_${repoSlug}_Commit.json | /p/Softwares/jq  '.size'`
+        getCommits ${totalcommits} ${projectkey} ${repoSlug}
     done  
+
 }
 
 getBranches()
@@ -59,7 +66,7 @@ getBranches()
     projectkey=$2
     repoSlug=$3
     for ((tb = 0 ; tb < ${totalBranches} ; tb++))
-    do
+     do
         branchName=`cat repos_${projectkey}_${repoSlug}.json | /p/Softwares/jq  '.values['"$tb"'].displayId' | sed 's/"//g'`
         echo ${projectkey}"|"${repoSlug}"|"${branchName} >> branchnames.properties
     done
@@ -74,7 +81,7 @@ newBranch()
 
 getPRs()
 {
-    totalPRs=$1
+       totalPRs=$1
 	projectkey=$2
 	repoSlug=$3
     for ((tp = 0 ; tp < ${totalPRs} ; tp++))
@@ -92,7 +99,30 @@ newPR()
     comm pr_sort.properties pr_old_sort.properties -3 | grep -E $msg_regex > newpr.properties
 }
 
+getCommits()
+{
+    totalCommits=$1
+    projectkey=$2
+    repoSlug=$3
+    #searchDate="2020-12-04"
+    for ((tc = 0 ; tc < ${totalCommits} ; tc++))
+    do
+        message=`cat repos_${projectkey}_${repoSlug}_commit.json | /p/Softwares/jq  '.values['"$tc"'].message' | sed 's/"//g'`
+        time=`cat repos_${projectkey}_${repoSlug}_commit.json | /p/Softwares/jq  '.values['"$tc"'].authorTimestamp' | sed 's/"//g'`
+	commitid=`cat repos_${projectkey}_${repoSlug}_commit.json | /p/Softwares/jq  '.values['"$tc"'].id' | sed 's/"//g'`
+	echo ${projectkey}"|"${repoSlug}"|"${message}"|"${time}"|"${commitid}
+	echo ${projectkey}"|"${repoSlug}"|"${message}"|"${time}"|"${commitid} >> commits.properties
+        #curl -H "Authorization: Bearer ${bitbucketKey}" http://172.16.8.35:7990/rest/api/1.0/projects/${projectName}/repos/${repoName}/commits?since=${searchDate} >commits.json
+        #Pushing Details For Commits
+    done
+}
 
+newCommits()
+{
+	sort -o commits_sort.properties commits.properties
+    	sort -o commits_old_sort.properties commits_old.properties
+	comm commits_sort.properties commits_old_sort.properties -3 | grep -E $msg_regex > newcommits.properties
+}
 listArtifact()
 {
     #rallyKey=${1}
@@ -111,24 +141,28 @@ listArtifact()
     done
 }
 
-
-getCommits()
-{
-    #bitbucketKey=${1}
-    searchDate="2020-12-04"
-    for repoDetail in `cat repoDetails.properties`
-    do
-        projectName=`echo ${repoDetail} | cut -d '|' -f1`
-        repoName=`echo ${repoDetail} | cut -d '|' -f2`
-        curl -H "Authorization: Bearer ${bitbucketKey}" http://172.16.8.35:7990/rest/api/1.0/projects/${projectName}/repos/${repoName}/commits?since=${searchDate} >commits.json
-        #Pushing Details For Commits
-    done
-}
-
-
 postCommitsToRally()
 {
-    echo hi
+	while read tc; do
+	ArtifactsInAlineAre=`echo ${tc} | grep -oE $msg_regex  | uniq`
+	echo "ArtifactsInAlineAre="${ArtifactsInAlineAre}
+	for i in ${ArtifactsInAlineAre}
+	do
+	  echo "1 by 1 artifacts are"${i}
+         FormattedId=${i}
+         mapping=`grep -s ${FormattedId} ObjectArtifactMapping.properties | uniq`
+	 ObjectId=`echo $mapping | cut -d '|' -f2`
+      ObjectType=`echo ${mapping} | cut -d '|' -f3`
+       commit_id=`echo $tc | cut -d '|' -f5`
+      commit_timestamp=`echo $tc | cut -d '|' -f4`
+       commit_timestamp=${commit_timestamp::-3}
+	date=`date -d @${commit_timestamp} +'%Y-%m-%d %H:%M:%S'| sed 's/ /T/' | sed 's/ //'`
+	 message=`echo $tc | cut -d '|' -f3`
+	artifact="/${ObjectType}/${ObjectId}"
+    uri="http://172.16.8.35:7990/projects/RC/repos/rallyintegrationdemo/commits/${commit_id}"
+	curl --header "zsessionid:_qjZabCw6TUajYHNKzj5pZ587kdzh70RSrjTs9aNkH7M" -H "Content-Type: application/json" -d '{"Changeset":{"Revision":"1","Uri":"'"${uri}"'","CommitTimestamp":"'"${date}"'","Message":"'"${message}"'","Author":"/user/411667913296","SCMRepository":"/scmrepository/424317194036","Artifacts":{"Artifact":"'"${artifact}"'"}}}' https://rally1.rallydev.com/slm/webservice/v2.0/changeset/create >post.json
+	done
+done < newcommits.properties
 }
 
 postPRToRally()
@@ -156,7 +190,7 @@ postPRToRally()
 	url="http://172.16.8.35:7990/projects/${projectkey}/repos/${repoSlug}/pull-requests"
 	echo url ${url}
 	artifact="/${ObjectType}/${ObjectId}"
-	curl --header "zsessionid:_5qkiIFxQaSYES9XL4aMNUFH2EeGMEiemV4EtMH4o" -H "Content-Type: application/json" -d '{"PullRequest":{"Description":"'"${Description}"'","Name":"'"${Title}"'","Artifact":"'"${artifact}"'","ExternalID":"123","ExternalFormattedId":"12345","Url":"'"${url}"'"}}' https://rally1.rallydev.com/slm/webservice/v2.0/pullrequest/create
+	curl --header "zsessionid:_5qkiIFxQaSYES9XL4aMNUFH2EeGMEiemV4EtMH4o" -H "Content-Type: application/json" -d '{"PullRequest":{"Description":"'"${Description}"'","Name":"'"${Title}"'","Artifact":"'"${artifact}"'","ExternalID":"'"${FormattedId}"'","ExternalFormattedId":"'"${FormattedId}"'","Url":"'"${url}"'"}}' https://rally1.rallydev.com/slm/webservice/v2.0/pullrequest/create
 	echo "Details of new PR has been updated on Rally" 
 	done
     done < newpr.properties
@@ -174,7 +208,7 @@ postBranchToRally()
 	for i in ${ArtifactsInAlineAre}
 	do
 	  echo "1 by 1 artifacts are"${i}
-       FormattedId=${i}
+        a${i}
         mapping=`grep -s ${ObjectId} ObjectArtifactMapping.properties | uniq`
 	echo ${mapping}
         artifactId=`echo ${mapping} | cut -d '|' -f1`
@@ -196,9 +230,11 @@ done <  newbranches.properties
 getProjects 
 newBranch
 newPR
+newCommits
 listArtifact
-postBranchToRally 
-postPRToRally
+#postBranchToRally 
+#postPRToRally
+postCommitsToRally
 
 cat repos_*.json > AllDetails.json
 rm -f repos_*.json
